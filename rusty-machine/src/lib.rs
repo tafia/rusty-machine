@@ -115,6 +115,7 @@ pub mod linalg {
     pub mod vector;
     pub mod utils;
     pub mod macros;
+    pub mod filters;
 }
 
 /// Module for machine learning.
