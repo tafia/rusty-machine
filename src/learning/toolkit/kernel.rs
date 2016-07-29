@@ -4,9 +4,16 @@
 
 use std::ops::{Add, Mul};
 
-use linalg::Vector;
-use linalg::Metric;
+use linalg::{Metric, MatrixSlice};
 use rulinalg::utils;
+
+/// Converts a std::slice into a 1 row `MatrixSlice`
+fn matrix_slice<T>(x: &[T]) -> MatrixSlice<T> {
+    unsafe {
+        let cols = x.len();
+        MatrixSlice::from_raw_parts(x.as_ptr(), 1, cols, cols)
+    }
+}
 
 /// The Kernel trait
 ///
@@ -286,9 +293,9 @@ impl Kernel for SquaredExp {
     fn kernel(&self, x1: &[f64], x2: &[f64]) -> f64 {
         assert_eq!(x1.len(), x2.len());
 
-        let diff = Vector::new(x1.to_vec()) - Vector::new(x2.to_vec());
+        let diff = matrix_slice(x1) - matrix_slice(x2);
 
-        let x = -diff.dot(&diff) / (2f64 * self.ls * self.ls);
+        let x = -utils::dot(diff.data(), diff.data()) / (2f64 * self.ls * self.ls);
         (self.ampl * x.exp())
     }
 }
@@ -348,7 +355,7 @@ impl Kernel for Exponential {
     fn kernel(&self, x1: &[f64], x2: &[f64]) -> f64 {
         assert_eq!(x1.len(), x2.len());
 
-        let diff = Vector::new(x1.to_vec()) - Vector::new(x2.to_vec());
+        let diff = matrix_slice(x1) - matrix_slice(x2);
 
         let x = -diff.norm() / (2f64 * self.ls * self.ls);
         (self.ampl * x.exp())
@@ -452,7 +459,7 @@ impl Kernel for Multiquadric {
     fn kernel(&self, x1: &[f64], x2: &[f64]) -> f64 {
         assert_eq!(x1.len(), x2.len());
 
-        let diff = Vector::new(x1.to_vec()) - Vector::new(x2.to_vec());
+        let diff = matrix_slice(x1) - matrix_slice(x2);
 
         diff.norm().hypot(self.c)
     }
@@ -508,8 +515,9 @@ impl Default for RationalQuadratic {
 
 impl Kernel for RationalQuadratic {
     fn kernel(&self, x1: &[f64], x2: &[f64]) -> f64 {
-        let diff = Vector::new(x1.to_vec()) - Vector::new(x2.to_vec());
+        let diff = matrix_slice(x1) - matrix_slice(x2);
 
-        (1f64 + diff.dot(&diff) / (2f64 * self.alpha * self.ls * self.ls)).powf(-self.alpha)
+        (1f64 + utils::dot(diff.data(), diff.data()) /
+            (2f64 * self.alpha * self.ls * self.ls)).powf(-self.alpha)
     }
 }
